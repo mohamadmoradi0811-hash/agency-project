@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>XAUUSD Algorithmic System</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="XAUUSD">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bg-base: #0a0a0a;
+            --bg-card: #141414;
+            --gold: #d4af37;
+            --gold-dim: rgba(212, 175, 55, 0.2);
+            --bull: #00ff88;
+            --bear: #ff3344;
+            --text-main: #f0f0f0;
+            --text-muted: #888888;
+            --border: #222222;
+            --flash-green: rgba(0, 255, 136, 0.3);
+            --flash-red: rgba(255, 51, 68, 0.3);
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--gold);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-toggle {
+            background: none;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .btn-toggle.inactive {
+            background: var(--gold-dim);
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+
+        .ticker-container {
+            text-align: center;
+            padding: 24px 0;
+        }
+
+        .ticker {
+            font-size: 3rem;
+            font-weight: 800;
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+
+        .ticker.flash-up {
+            color: var(--bull);
+            text-shadow: 0 0 10px var(--flash-green);
+        }
+
+        .ticker.flash-down {
+            color: var(--bear);
+            text-shadow: 0 0 10px var(--flash-red);
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .badge.active { border-color: var(--bull); color: var(--bull); }
+        .badge.inactive { border-color: var(--text-muted); color: var(--text-muted); }
+        .badge.bull { border-color: var(--bull); color: var(--bull); }
+        .badge.bear { border-color: var(--bear); color: var(--bear); }
+        .badge.trend { border-color: var(--gold); color: var(--gold); }
+        .badge.chop { border-color: var(--bear); color: var(--bear); }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .signal-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--gold);
+        }
+
+        .signal-dir {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .dir-buy { background: rgba(0,255,136,0.1); color: var(--bull); }
+        .dir-sell { background: rgba(255,51,68,0.1); color: var(--bear); }
+
+        .signal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-val {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--gold);
+            width: 0%;
+            transition: width 0.5s ease-out;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hist-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hist-setup { font-weight: bold; font-size: 0.95rem; }
+        .hist-time { font-size: 0.75rem; color: var(--text-muted); }
+
+        .hist-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hist-status { font-size: 0.85rem; font-weight: bold; }
+
+        .status-tp1, .status-tp2 { color: var(--bull); }
+        .status-stopped { color: var(--bear); }
+        .status-pending { color: var(--gold); }
+
+        .hidden { display: none !important; }
+
+        @keyframes screen-flash {
+            0% { background-color: var(--bg-base); }
+            10% { background-color: var(--gold-dim); }
+            100% { background-color: var(--bg-base); }
+        }
+
+        .flash-active {
+            animation: screen-flash 0.8s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="title">XAUUSD SYSTEM</div>
+        <div class="controls">
+            <div id="conn-status" style="width:10px;height:10px;border-radius:50%;background:var(--bear);"></div>
+            <button id="btn-news" class="btn-toggle inactive">News Shield: OFF</button>
+            <button id="btn-mute" class="btn-toggle inactive">🔈 Unmute</button>
+        </div>
+    </div>
+
+    <div class="ticker-container">
+        <div id="ticker" class="ticker">0.000</div>
+    </div>
+
+    <div class="badges">
+        <div id="badge-session" class="badge inactive">Session Closed</div>
+        <div id="badge-trend" class="badge">EMA: --</div>
+        <div id="badge-mode" class="badge">Mode: --</div>
+        <div id="badge-pnl" class="badge">PnL: $0.00</div>
+    </div>
+
+    <div class="section-title">Active Signal</div>
+    <div id="active-signal-card" class="card hidden">
+        <div class="signal-header">
+            <div id="sig-name" class="signal-name">--</div>
+            <div id="sig-dir" class="signal-dir">--</div>
+        </div>
+        <div class="signal-grid">
+            <div class="stat">
+                <span class="stat-label">ENTRY</span>
+                <span id="sig-entry" class="stat-val">0.000</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">STOP LOSS</span>
+                <span id="sig-sl" class="stat-val">0.000</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">TP1 (1:1)</span>
+                <span id="sig-tp1" class="stat-val">0.000</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">TP2 (1:2)</span>
+                <span id="sig-tp2" class="stat-val">0.000</span>
+            </div>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Progress: <span id="sig-status">PENDING</span></div>
+        <div class="progress-bar-container">
+            <div id="sig-progress" class="progress-bar"></div>
+        </div>
+    </div>
+    <div id="no-signal" class="card" style="text-align:center;color:var(--text-muted);">
+        No active signal. Waiting for setup...
+    </div>
+
+    <div class="section-title">History</div>
+    <div id="history-list" class="history-list">
+        <!-- populated via js -->
+    </div>
+
+    <script>
+        let ws;
+        let isMuted = true;
+        let lastPrice = 0;
+        let reconnectTimeout;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const btnMute = document.getElementById('btn-mute');
+        btnMute.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                btnMute.textContent = '🔈 Unmute';
+                btnMute.classList.add('inactive');
+            } else {
+                btnMute.textContent = '🔊 Muted?';
+                btnMute.classList.remove('inactive');
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+        });
+
+        let newsShieldActive = false;
+        const btnNews = document.getElementById('btn-news');
+        btnNews.addEventListener('click', async () => {
+            newsShieldActive = !newsShieldActive;
+            if (newsShieldActive) {
+                btnNews.textContent = '🛡️ News Shield: ON';
+                btnNews.classList.remove('inactive');
+            } else {
+                btnNews.textContent = 'News Shield: OFF';
+                btnNews.classList.add('inactive');
+            }
+            try {
+                await fetch('/api/news_shield', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: newsShieldActive })
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        });
+
+        function playAlert() {
+            if (isMuted) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+            osc.frequency.setValueAtTime(1108.73, audioCtx.currentTime + 0.1); // C#6
+
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 400]);
+            }
+
+            // Visual fallback for iOS since navigator.vibrate is not supported in Safari
+            document.body.classList.add('flash-active');
+            setTimeout(() => {
+                document.body.classList.remove('flash-active');
+            }, 800);
+        }
+
+        function connect() {
+            const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            ws = new WebSocket(proto + window.location.host + '/ws');
+
+            ws.onopen = () => {
+                document.getElementById('conn-status').style.background = 'var(--bull)';
+                console.log('Connected to WS');
+                fetchHistory();
+            };
+
+            ws.onclose = () => {
+                document.getElementById('conn-status').style.background = 'var(--bear)';
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = setTimeout(connect, 2000);
+            };
+
+            ws.onerror = (err) => {
+                ws.close();
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'tick') {
+                    updateTicker(data.price);
+                } else if (data.type === 'state') {
+                    updateState(data);
+                } else if (data.type === 'signal') {
+                    playAlert();
+                    updateActiveSignal(data.signal);
+                    fetchHistory();
+                }
+            };
+        }
+
+        function updateTicker(price) {
+            const tickerEl = document.getElementById('ticker');
+            tickerEl.textContent = price.toFixed(3);
+
+            if (lastPrice !== 0 && price !== lastPrice) {
+                tickerEl.className = 'ticker ' + (price > lastPrice ? 'flash-up' : 'flash-down');
+                setTimeout(() => { tickerEl.className = 'ticker'; }, 300);
+            }
+            lastPrice = price;
+        }
+
+        function updateState(data) {
+            // Badges
+            const bSession = document.getElementById('badge-session');
+            if (data.session_active) {
+                bSession.textContent = 'Session Active';
+                bSession.className = 'badge active';
+            } else {
+                bSession.textContent = 'Session Closed';
+                bSession.className = 'badge inactive';
+            }
+
+            const bTrend = document.getElementById('badge-trend');
+            bTrend.textContent = 'EMA: ' + (data.trend || '--');
+            bTrend.className = 'badge ' + (data.trend === 'BULL' ? 'bull' : (data.trend === 'BEAR' ? 'bear' : ''));
+
+            const bMode = document.getElementById('badge-mode');
+            bMode.textContent = 'Mode: ' + (data.mode || '--');
+            bMode.className = 'badge ' + (data.mode === 'CHOPPY' ? 'chop' : 'trend');
+
+            const bPnl = document.getElementById('badge-pnl');
+            if (data.daily_pnl !== undefined) {
+                bPnl.textContent = 'PnL: $' + data.daily_pnl.toFixed(2);
+                if (data.daily_pnl >= 20.0) {
+                    bPnl.className = 'badge bull';
+                } else if (data.daily_pnl < 0) {
+                    bPnl.className = 'badge bear';
+                } else {
+                    bPnl.className = 'badge';
+                }
+            }
+
+            if (data.active_signal) {
+                updateActiveSignal(data.active_signal);
+            } else {
+                document.getElementById('active-signal-card').classList.add('hidden');
+                document.getElementById('no-signal').classList.remove('hidden');
+            }
+        }
+
+        function updateActiveSignal(sig) {
+            document.getElementById('active-signal-card').classList.remove('hidden');
+            document.getElementById('no-signal').classList.add('hidden');
+
+            document.getElementById('sig-name').textContent = sig.setup;
+            const dirEl = document.getElementById('sig-dir');
+            dirEl.textContent = sig.direction;
+            dirEl.className = 'signal-dir ' + (sig.direction === 'BUY' ? 'dir-buy' : 'dir-sell');
+
+            document.getElementById('sig-entry').textContent = sig.entry.toFixed(3);
+            document.getElementById('sig-sl').textContent = sig.sl.toFixed(3);
+            document.getElementById('sig-tp1').textContent = sig.tp1.toFixed(3);
+            document.getElementById('sig-tp2').textContent = sig.tp2.toFixed(3);
+
+            document.getElementById('sig-status').textContent = sig.status;
+
+            const progressEl = document.getElementById('sig-progress');
+            if (sig.status === 'PENDING') progressEl.style.width = '25%';
+            else if (sig.status === 'HIT_TP1') progressEl.style.width = '50%';
+            else if (sig.status === 'HIT_TP2') progressEl.style.width = '100%';
+            else if (sig.status === 'STOPPED') progressEl.style.width = '0%';
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const history = await res.json();
+                renderHistory(history);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderHistory(history) {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+
+            if (history.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-muted);text-align:center;">No history available.</div>';
+                return;
+            }
+
+            history.forEach(item => {
+                const d = new Date(item.timestamp * 1000);
+                const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                const clsStatus = item.status === 'STOPPED' ? 'status-stopped' :
+                                  (item.status.includes('TP') ? 'status-tp1' : 'status-pending');
+
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="hist-left">
+                        <span class="hist-setup">${item.setup} (${item.direction})</span>
+                        <span class="hist-time">${timeStr} | E: ${item.entry.toFixed(2)}</span>
+                    </div>
+                    <div class="hist-right">
+                        <span class="hist-status ${clsStatus}">${item.status}</span>
+                        <span style="font-size:0.75rem;color:var(--text-muted);">RR: ${item.rr ? item.rr.toFixed(1) : '-'}</span>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // Init
+        connect();
+    </script>
+</body>
+</html>
