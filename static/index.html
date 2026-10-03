@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>XAUUSD Algorithmic System</title>
-    <meta name="theme-color" content="#0d0d0d">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="XAUUSD">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -239,6 +243,16 @@
         .status-pending { color: var(--gold); }
 
         .hidden { display: none !important; }
+
+        @keyframes screen-flash {
+            0% { background-color: var(--bg-base); }
+            10% { background-color: var(--gold-dim); }
+            100% { background-color: var(--bg-base); }
+        }
+
+        .flash-active {
+            animation: screen-flash 0.8s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -369,6 +383,12 @@
             if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200, 100, 400]);
             }
+
+            // Visual fallback for iOS since navigator.vibrate is not supported in Safari
+            document.body.classList.add('flash-active');
+            setTimeout(() => {
+                document.body.classList.remove('flash-active');
+            }, 800);
         }
 
         function connect() {
